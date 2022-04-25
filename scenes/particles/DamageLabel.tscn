@@ -1,0 +1,6 @@
+[gd_scene format=2]
+
+[node name="DamageLabel" type="Label"]
+__meta__ = {
+"_edit_use_anchors_": false
+}

@@ -1,0 +1,20 @@
+Godot Engine v3.4.4.stable.official.419e713a2 - https://godotengine.org
+OpenGL ES 3.0 Renderer: NVIDIA GeForce RTX 2080 Ti/PCIe/SSE2
+OpenGL ES Batching: ON
+ 
+ERROR: Condition "err" is true. Returned: err
+   at: load_source_code (modules/gdscript/gdscript.cpp:787) - Condition "err" is true. Returned: err
+ERROR: Cannot load source code from file 'res://scripts/server/playerJoinListener.gd'.
+   at: load (modules/gdscript/gdscript.cpp:2184) - Condition "err != OK" is true. Returned: RES()
+ERROR: Failed loading resource: res://scripts/server/playerJoinListener.gd. Make sure resources have been imported by opening the project in the editor at least once.
+   at: _load (core/io/resource_loader.cpp:270) - Condition "found" is true. Returned: RES()
+ERROR: /Users/malik/Desktop/Client/scenes/Levels/Tutorial.tscn:3 - Parse Error: [ext_resource] referenced nonexistent resource at: res://scripts/server/playerJoinListener.gd
+   at: poll (scene/resources/resource_format_text.cpp:412) - /Users/malik/Desktop/Client/scenes/Levels/Tutorial.tscn:3 - Parse Error: [ext_resource] referenced nonexistent resource at: res://scripts/server/playerJoinListener.gd
+ERROR: Failed to load resource '/Users/malik/Desktop/Client/scenes/Levels/Tutorial.tscn'.
+   at: load (core/io/resource_loader.cpp:206) - Condition "err != OK" is true. Returned: RES()
+ERROR: Failed loading resource: /Users/malik/Desktop/Client/scenes/Levels/Tutorial.tscn. Make sure resources have been imported by opening the project in the editor at least once.
+   at: _load (core/io/resource_loader.cpp:270) - Condition "found" is true. Returned: RES()
+ERROR: Failed loading scene: /Users/malik/Desktop/Client/scenes/Levels/Tutorial.tscn
+   at: start (main/main.cpp:2011) - Condition "!scene" is true. Returned: false
+WARNING: ObjectDB instances leaked at exit (run with --verbose for details).
+   at: cleanup (core/object.cpp:2064) - ObjectDB instances leaked at exit (run with --verbose for details).

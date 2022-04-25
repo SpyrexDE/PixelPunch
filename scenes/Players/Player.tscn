@@ -1,0 +1,527 @@
+[gd_scene load_steps=24 format=2]
+
+[ext_resource path="res://assets/Sprites/01-King Human/Idle (78x58).png" type="Texture" id=1]
+[ext_resource path="res://assets/Sprites/01-King Human/Run (78x58).png" type="Texture" id=2]
+[ext_resource path="res://assets/Sprites/01-King Human/Jump (78x58).png" type="Texture" id=3]
+[ext_resource path="res://assets/Sprites/01-King Human/Attack (78x58).png" type="Texture" id=5]
+[ext_resource path="res://assets/Sprites/01-King Human/Dead (78x58).png" type="Texture" id=6]
+[ext_resource path="res://assets/Sprites/01-King Human/Hit (78x58).png" type="Texture" id=7]
+[ext_resource path="res://addons/Trail/trail_2d.gd" type="Script" id=8]
+
+[sub_resource type="GDScript" id=1]
+script/source = "extends KinematicBody2D
+
+const TARGET_FPS = 60
+const ACCELERATION = 20
+const MAX_SPEED = 400
+const FRICTION = 15
+const AIR_RESISTANCE = 1
+const GRAVITY = 20
+const JUMP_FORCE = 500
+export (int, 0, 200) var push = 100
+
+var motion = Vector2.ZERO
+
+var can_jump = true
+var should_jump = false
+var state = \"idle\"
+
+var isPuppet = false
+var id
+
+var delt = 0.004167
+
+
+remote var pos = Vector2.ZERO
+
+onready var animationPlayer = $AnimationPlayer
+
+func _ready():
+	Connector.connect(\"selfJoined\", self, \"_update_name2\")
+	Server.connect(\"createdServer\", self, \"_update_name\")
+	pos = self.position
+	
+func _update_name():
+	self.name = str(multiplayer.get_network_unique_id())
+	print(name)
+
+func _update_name2():
+	self.name = str(multiplayer.get_network_unique_id())
+	print(name)
+
+#Movement
+func _physics_process(delta):
+	delt = delta
+	if(!isPuppet):
+		var x_input = ceil(Input.get_action_strength(\"move_right\")) - ceil(Input.get_action_strength(\"move_left\"))
+		var jump
+		
+		if Input.is_action_just_pressed(\"attack\"):
+			rpc(\"requestState\",\"attack\")
+		if Input.is_action_just_pressed(\"jump\"):
+			jump = true
+		
+		if(is_network_master()):
+			setInput(x_input, jump)
+		else:
+			rpc_unreliable_id(1, \"setInput\", x_input, jump)
+	
+	if(is_network_master()):	#Only the server client let the players move
+		checkPush()
+		rset(\"pos\", self.position)
+	else:
+		position = pos
+
+remote func setInput(input, jump):
+	if input != 0:
+		if is_on_floor():
+			rpc(\"requestState\",\"run\")
+		motion.x += input * ACCELERATION * delt * TARGET_FPS
+		motion.x = clamp(motion.x, -MAX_SPEED, MAX_SPEED)
+		
+		rpc_unreliable(\"setRot\", input)
+		
+		
+	elif is_on_floor():
+		rpc(\"requestState\",\"idle\")
+	
+	motion.y += GRAVITY * delt * TARGET_FPS
+	
+	if !is_on_floor() && !is_on_wall():
+			rpc(\"requestState\",\"jump\")
+	
+	if can_jump:
+		if input == 0:
+			motion.x = lerp(motion.x, 0, FRICTION * delt)
+			
+		if jump || should_jump == true:
+			motion.y = -JUMP_FORCE
+			can_jump = false
+	else:
+		if jump and motion.y < -JUMP_FORCE/2:
+			motion.y = -JUMP_FORCE/2
+		if input == 0:
+			motion.x = lerp(motion.x, 0, AIR_RESISTANCE * delt)
+	motion = move_and_slide(motion, Vector2.UP, false, 4, PI/4, false)
+
+sync func setRot(rot):
+	$Tween.interpolate_property($RotationNode, \"scale\", $RotationNode.scale, Vector2(rot,1), 0.05, Tween.TRANS_CUBIC, Tween.EASE_OUT)
+	$Tween.start()
+
+#Animation
+sync func requestState(requestedState):
+	match animationPlayer.current_animation:
+		\"attack\":
+			pass
+		\"hit\":
+			pass
+		_:
+			if animationPlayer.has_animation(requestedState):
+				animationPlayer.play(requestedState)
+				state = requestedState
+	
+func checkPush():
+	for index in get_slide_count():
+		var collision = get_slide_collision(index)
+		if collision.collider.is_in_group(\"bodies\"):
+			collision.collider.apply_central_impulse(-collision.normal * push)
+"
+
+[sub_resource type="Curve" id=2]
+_data = [ Vector2( 0, 0 ), 0.0, 0.0, 0, 0, Vector2( 1, 1 ), 0.0, 0.0, 0, 0 ]
+
+[sub_resource type="Gradient" id=3]
+colors = PoolColorArray( 1, 1, 1, 1, 0.751953, 0.751953, 0.751953, 1 )
+
+[sub_resource type="GDScript" id=4]
+script/source = "extends Area2D
+
+
+func _on_HammerHit_body_entered(body):
+	var rndX = rand_range(2,4)
+	var rndY = rand_range(2,4)
+	if body.is_in_group(\"bodies\"):
+		if body.has_method(\"hit\"):
+			body.rpc(\"hit\", get_parent().get_parent().position, rndX, rndY)
+"
+
+[sub_resource type="CapsuleShape2D" id=5]
+radius = 2.48623
+height = 66.5078
+
+[sub_resource type="CapsuleShape2D" id=6]
+radius = 14.277
+height = 11.1534
+
+[sub_resource type="Animation" id=7]
+length = 0.2
+step = 0.01
+tracks/0/type = "value"
+tracks/0/path = NodePath("RotationNode/Sprite:texture")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0 ),
+"transitions": PoolRealArray( 1 ),
+"update": 1,
+"values": [ ExtResource( 5 ) ]
+}
+tracks/1/type = "value"
+tracks/1/path = NodePath("RotationNode/Sprite:frame")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/keys = {
+"times": PoolRealArray( 0, 0.2 ),
+"transitions": PoolRealArray( 1, 1 ),
+"update": 0,
+"values": [ 0, 2 ]
+}
+tracks/2/type = "value"
+tracks/2/path = NodePath("RotationNode/Sprite:hframes")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/keys = {
+"times": PoolRealArray( 0 ),
+"transitions": PoolRealArray( 1 ),
+"update": 1,
+"values": [ 3 ]
+}
+tracks/3/type = "value"
+tracks/3/path = NodePath("RotationNode/HammerHit/HammerHitbox:position")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/keys = {
+"times": PoolRealArray( 0, 0.19 ),
+"transitions": PoolRealArray( 1, 1 ),
+"update": 0,
+"values": [ Vector2( 58, 23 ), Vector2( 58, -32 ) ]
+}
+tracks/4/type = "value"
+tracks/4/path = NodePath("RotationNode/HammerHit/HammerHitbox:disabled")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/keys = {
+"times": PoolRealArray( 0, 0.19 ),
+"transitions": PoolRealArray( 1, 1 ),
+"update": 1,
+"values": [ false, true ]
+}
+
+[sub_resource type="Animation" id=8]
+loop = true
+tracks/0/type = "value"
+tracks/0/path = NodePath("RotationNode/Sprite:texture")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0 ),
+"transitions": PoolRealArray( 1 ),
+"update": 1,
+"values": [ ExtResource( 6 ) ]
+}
+tracks/1/type = "value"
+tracks/1/path = NodePath("RotationNode/Sprite:frame")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/keys = {
+"times": PoolRealArray( 0, 1 ),
+"transitions": PoolRealArray( 1, 1 ),
+"update": 0,
+"values": [ 0, 3 ]
+}
+tracks/2/type = "value"
+tracks/2/path = NodePath("RotationNode/Sprite:hframes")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/keys = {
+"times": PoolRealArray( 0 ),
+"transitions": PoolRealArray( 1 ),
+"update": 1,
+"values": [ 4 ]
+}
+
+[sub_resource type="Animation" id=9]
+loop = true
+tracks/0/type = "value"
+tracks/0/path = NodePath("RotationNode/Sprite:texture")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0 ),
+"transitions": PoolRealArray( 1 ),
+"update": 1,
+"values": [ ExtResource( 7 ) ]
+}
+tracks/1/type = "value"
+tracks/1/path = NodePath("RotationNode/Sprite:frame")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/keys = {
+"times": PoolRealArray( 0, 1 ),
+"transitions": PoolRealArray( 1, 1 ),
+"update": 0,
+"values": [ 0, 1 ]
+}
+tracks/2/type = "value"
+tracks/2/path = NodePath("RotationNode/Sprite:hframes")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/keys = {
+"times": PoolRealArray( 0 ),
+"transitions": PoolRealArray( 1 ),
+"update": 1,
+"values": [ 2 ]
+}
+
+[sub_resource type="Animation" id=10]
+loop = true
+tracks/0/type = "value"
+tracks/0/path = NodePath("RotationNode/Sprite:texture")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0 ),
+"transitions": PoolRealArray( 1 ),
+"update": 1,
+"values": [ ExtResource( 1 ) ]
+}
+tracks/1/type = "value"
+tracks/1/path = NodePath("RotationNode/Sprite:frame")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/keys = {
+"times": PoolRealArray( 0, 1 ),
+"transitions": PoolRealArray( 1, 1 ),
+"update": 0,
+"values": [ 0, 10 ]
+}
+tracks/2/type = "value"
+tracks/2/path = NodePath("RotationNode/Sprite:hframes")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/keys = {
+"times": PoolRealArray( 0 ),
+"transitions": PoolRealArray( 1 ),
+"update": 1,
+"values": [ 11 ]
+}
+
+[sub_resource type="Animation" id=11]
+length = 0.6
+loop = true
+tracks/0/type = "value"
+tracks/0/path = NodePath("RotationNode/Sprite:texture")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0 ),
+"transitions": PoolRealArray( 1 ),
+"update": 1,
+"values": [ ExtResource( 3 ) ]
+}
+tracks/1/type = "value"
+tracks/1/path = NodePath("RotationNode/Sprite:frame")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/keys = {
+"times": PoolRealArray( 0 ),
+"transitions": PoolRealArray( 1 ),
+"update": 0,
+"values": [ 0 ]
+}
+tracks/2/type = "value"
+tracks/2/path = NodePath("RotationNode/Sprite:hframes")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/keys = {
+"times": PoolRealArray( 0 ),
+"transitions": PoolRealArray( 1 ),
+"update": 1,
+"values": [ 1 ]
+}
+
+[sub_resource type="Animation" id=12]
+length = 0.6
+loop = true
+tracks/0/type = "value"
+tracks/0/path = NodePath("RotationNode/Sprite:texture")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0 ),
+"transitions": PoolRealArray( 1 ),
+"update": 1,
+"values": [ ExtResource( 2 ) ]
+}
+tracks/1/type = "value"
+tracks/1/path = NodePath("RotationNode/Sprite:frame")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/keys = {
+"times": PoolRealArray( 0, 0.6 ),
+"transitions": PoolRealArray( 1, 1 ),
+"update": 0,
+"values": [ 0, 7 ]
+}
+tracks/2/type = "value"
+tracks/2/path = NodePath("RotationNode/Sprite:hframes")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/keys = {
+"times": PoolRealArray( 0 ),
+"transitions": PoolRealArray( 1 ),
+"update": 1,
+"values": [ 8 ]
+}
+
+[sub_resource type="CapsuleShape2D" id=13]
+radius = 2.98152
+height = 10.3828
+
+[sub_resource type="GDScript" id=14]
+script/source = "extends CollisionShape2D
+
+func _physics_process(delta):
+	if get_parent().state == \"jump\":
+		self.visible = false
+	else:
+		self.visible = true
+"
+
+[sub_resource type="GDScript" id=15]
+script/source = "extends Timer
+
+onready var player = get_parent()
+
+func _physics_process(delta):
+	if player.is_on_floor():
+		player.can_jump = true
+	else:
+		if self.is_stopped():
+			self.start()
+
+func _on_Timer_timeout():
+	player.can_jump = false
+"
+
+[sub_resource type="GDScript" id=16]
+script/source = "extends Timer
+
+onready var player = get_parent()
+
+func _physics_process(delta):
+		if Input.is_action_just_pressed(\"jump\") && player.can_jump == false:
+			player.should_jump = true
+			self.start()
+
+
+func _on_GroundTimer_timeout():
+	player.should_jump = false
+"
+
+[node name="Player" type="KinematicBody2D"]
+script = SubResource( 1 )
+
+[node name="Trail2D" type="Line2D" parent="."]
+visible = false
+points = PoolVector2Array( 0, 0 )
+width = 30.0
+width_curve = SubResource( 2 )
+gradient = SubResource( 3 )
+joint_mode = 2
+begin_cap_mode = 2
+end_cap_mode = 2
+antialiased = true
+script = ExtResource( 8 )
+lifetime = 0.3
+
+[node name="RotationNode" type="Node2D" parent="."]
+
+[node name="Sprite" type="Sprite" parent="RotationNode"]
+position = Vector2( 14.8837, -5.41956 )
+scale = Vector2( 2, 2 )
+z_index = 999
+texture = ExtResource( 1 )
+hframes = 11
+frame = 10
+
+[node name="HammerHit" type="Area2D" parent="RotationNode"]
+script = SubResource( 4 )
+
+[node name="HammerHitbox" type="CollisionShape2D" parent="RotationNode/HammerHit"]
+position = Vector2( 58, -32 )
+rotation = 1.5708
+shape = SubResource( 5 )
+disabled = true
+
+[node name="PlayerHitbox" type="CollisionShape2D" parent="."]
+position = Vector2( 0.0716286, 1.35305 )
+shape = SubResource( 6 )
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+anims/attack = SubResource( 7 )
+anims/die = SubResource( 8 )
+anims/hit = SubResource( 9 )
+anims/idle = SubResource( 10 )
+anims/jump = SubResource( 11 )
+anims/run = SubResource( 12 )
+
+[node name="HeadCollisionShape" type="CollisionShape2D" parent="."]
+position = Vector2( 0, -16 )
+rotation = 1.5708
+shape = SubResource( 13 )
+script = SubResource( 14 )
+
+[node name="JumpTimer" type="Timer" parent="."]
+wait_time = 0.6
+script = SubResource( 15 )
+
+[node name="GroundTimer" type="Timer" parent="."]
+wait_time = 0.2
+script = SubResource( 16 )
+
+[node name="Tween" type="Tween" parent="."]
+
+[connection signal="body_entered" from="RotationNode/HammerHit" to="RotationNode/HammerHit" method="_on_HammerHit_body_entered"]
+[connection signal="timeout" from="JumpTimer" to="JumpTimer" method="_on_Timer_timeout"]
+[connection signal="timeout" from="GroundTimer" to="GroundTimer" method="_on_GroundTimer_timeout"]

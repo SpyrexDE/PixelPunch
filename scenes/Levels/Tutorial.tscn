@@ -1,0 +1,163 @@
+[gd_scene load_steps=16 format=2]
+
+[ext_resource path="res://scripts/server/playerJoinListener.gd" type="Script" id=1]
+[ext_resource path="res://scenes/Players/Player.tscn" type="PackedScene" id=2]
+[ext_resource path="res://scenes/UI/Camera.tscn" type="PackedScene" id=3]
+[ext_resource path="res://scenes/stickers/Sticker - Heart.tscn" type="PackedScene" id=4]
+[ext_resource path="res://tilesets/CollisionTerrain.tres" type="TileSet" id=5]
+[ext_resource path="res://tilesets/BG.tres" type="TileSet" id=6]
+[ext_resource path="res://tilesets/dec.tres" type="TileSet" id=7]
+[ext_resource path="res://fonts/Fipps-Regular.otf" type="DynamicFontData" id=8]
+
+[sub_resource type="DynamicFont" id=1]
+font_data = ExtResource( 8 )
+
+[sub_resource type="PhysicsMaterial" id=2]
+rough = true
+bounce = 1e+08
+
+[sub_resource type="GDScript" id=3]
+script/source = "extends Area2D
+
+var crateScene = load(\"res://scenes/Objects/Crate.tscn\")
+var crate : Node2D = null
+
+func _on_Area2D_input_event(viewport, event, shape_idx):
+	if Input.is_mouse_button_pressed(1):
+		rpc(\"createCrate\", get_local_mouse_position())
+
+func _physics_process(delta):
+	if(crate != null):
+		pass
+
+sync func createCrate(pos):
+	crate = crateScene.instance()
+	add_child(crate)
+	crate.position = pos
+"
+
+[sub_resource type="RectangleShape2D" id=4]
+extents = Vector2( 248, 224 )
+
+[sub_resource type="GDScript" id=5]
+script/source = "extends Area2D
+
+
+
+func _on_Flag1_body_entered(body):
+	if body.name == \"Sticker - Heart\":
+		rpc(\"addPoints\", 1)
+		get_tree().root.get_node(\"Tutorial/Objects/Sticker - Heart\").rpc(\"reset\")
+sync func addPoints(value):
+	get_parent().get_parent().get_node(\"Label\").text = str(int(get_parent().get_parent().get_node(\"Label2\").text) + value)
+"
+
+[sub_resource type="RectangleShape2D" id=6]
+extents = Vector2( 7.99999, 93.0577 )
+
+[sub_resource type="GDScript" id=7]
+script/source = "extends Area2D
+
+
+
+func _on_Flag2_body_entered(body):
+	if body.name == \"Sticker - Heart\":
+		rpc(\"addPoints\", 1)
+		get_tree().root.get_node(\"Tutorial/Objects/Sticker - Heart\").rpc(\"reset\")
+
+sync func addPoints(value):
+	get_parent().get_parent().get_node(\"Label\").text = str(int(get_parent().get_parent().get_node(\"Label\").text) + value)
+"
+
+[node name="Tutorial" type="Node2D"]
+
+[node name="BG" type="TileMap" parent="."]
+scale = Vector2( 2, 2 )
+tile_set = ExtResource( 6 )
+cell_size = Vector2( 32, 32 )
+format = 1
+tile_data = PoolIntArray( 65541, 0, 0, 65542, 1, 0, 65543, 1, 0, 65544, 1, 0, 65545, 1, 0, 65546, -1610612736, 0, 131076, 0, 0, 131077, 1610612739, 0, 131078, 2, 0, 131079, 2, 0, 131080, 2, 0, 131081, 2, 0, 131082, -1073741821, 0, 131083, -1610612736, 0, 196609, 0, 0, 196610, 1, 0, 196611, 1, 0, 196612, 1610612739, 0, 196613, 2, 0, 196614, 2, 0, 196615, 2, 0, 196616, 2, 0, 196617, 2, 0, 196618, 2, 0, 196619, -1073741821, 0, 196620, 1, 0, 196621, 1, 0, 196622, -1610612736, 0, 262145, -1073741823, 0, 262146, 2, 0, 262147, 2, 0, 262148, 2, 0, 262149, 2, 0, 262150, 2, 0, 262151, 2, 0, 262152, 2, 0, 262153, 2, 0, 262154, 2, 0, 262155, 2, 0, 262156, 2, 0, 262157, 2, 0, 262158, -1610612735, 0, 327681, -1073741824, 0, 327682, 1610612737, 0, 327683, 1610612737, 0, 327684, -1610612733, 0, 327685, 2, 0, 327686, 2, 0, 327687, 2, 0, 327688, 2, 0, 327689, 2, 0, 327690, 2, 0, 327691, 3, 0, 327692, 1610612737, 0, 327693, 1610612737, 0, 327694, 1610612736, 0, 393220, -1073741823, 0, 393221, 2, 0, 393222, 2, 0, 393223, 2, 0, 393224, 2, 0, 393225, 2, 0, 393226, 2, 0, 393227, -1610612735, 0, 458756, -1073741824, 0, 458757, 1610612737, 0, 458758, 1610612737, 0, 458759, 1610612737, 0, 458760, 1610612737, 0, 458761, 1610612737, 0, 458762, 1610612737, 0, 458763, 1610612736, 0 )
+
+[node name="Decoration" type="TileMap" parent="."]
+scale = Vector2( 2, 2 )
+tile_set = ExtResource( 7 )
+cell_size = Vector2( 32, 32 )
+format = 1
+tile_data = PoolIntArray( 196609, 0, 0, 196613, 4, 0, 196617, 5, 0, 196622, 0, 0, 262145, 1, 0, 262158, 1, 0, 327681, 3, 0, 327694, 2, 0 )
+
+[node name="Collision" type="TileMap" parent="."]
+scale = Vector2( 2, 2 )
+tile_set = ExtResource( 5 )
+cell_size = Vector2( 32, 32 )
+format = 1
+tile_data = PoolIntArray( 4, 1, 0, 5, 1610612738, 0, 6, 1610612738, 0, 7, 1610612738, 0, 8, 1610612738, 0, 9, 1610612738, 0, 10, 1610612738, 0, 11, -1610612735, 0, 65539, 1, 0, 65540, 1610612736, 0, 65547, -1073741824, 0, 65548, -1610612735, 0, 131072, 1, 0, 131073, 1610612738, 0, 131075, 1610612736, 0, 131084, -1073741824, 0, 131085, 1610612738, 0, 131086, 1610612738, 0, 131087, -1610612735, 0, 196608, -1610612734, 0, 196623, -1073741822, 0, 262144, -1610612734, 0, 262159, -1073741822, 0, 327680, -1610612734, 0, 327695, -1073741822, 0, 393216, -1073741823, 0, 393217, 2, 0, 393218, 2, 0, 393219, -1610612736, 0, 393228, 0, 0, 393229, 2, 0, 393230, 2, 0, 393231, 1610612737, 0, 458755, -1610612734, 0, 458764, -1073741822, 0, 524291, -1073741823, 0, 524292, 2, 0, 524293, 2, 0, 524294, 2, 0, 524295, 2, 0, 524296, 2, 0, 524297, 2, 0, 524298, 2, 0, 524299, 2, 0, 524300, 1610612737, 0 )
+
+[node name="Label" type="Label" parent="."]
+margin_left = 396.947
+margin_top = 90.4157
+margin_right = 471.947
+margin_bottom = 140.416
+rect_scale = Vector2( 3, 3 )
+custom_fonts/font = SubResource( 1 )
+text = "0"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label2" type="Label" parent="."]
+margin_left = 556.947
+margin_top = 90.4157
+margin_right = 631.947
+margin_bottom = 140.416
+rect_scale = Vector2( 3, 3 )
+custom_fonts/font = SubResource( 1 )
+text = "0"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Players" type="Node" parent="."]
+script = ExtResource( 1 )
+
+[node name="Player" parent="Players" instance=ExtResource( 2 )]
+position = Vector2( 152, 360 )
+
+[node name="Objects" type="Node" parent="."]
+
+[node name="Sticker - Heart" parent="Objects" groups=["bodies"] instance=ExtResource( 4 )]
+position = Vector2( 512, 168 )
+physics_material_override = SubResource( 2 )
+gravity_scale = 10.0
+contacts_reported = 10
+contact_monitor = true
+
+[node name="Areas" type="Node" parent="."]
+
+[node name="CrateClicker" type="Area2D" parent="Areas"]
+script = SubResource( 3 )
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Areas/CrateClicker"]
+position = Vector2( 512, 288 )
+shape = SubResource( 4 )
+
+[node name="Flag1" type="Area2D" parent="Areas"]
+script = SubResource( 5 )
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Areas/Flag1"]
+position = Vector2( 96, 288 )
+shape = SubResource( 6 )
+
+[node name="Flag2" type="Area2D" parent="Areas"]
+script = SubResource( 7 )
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Areas/Flag2"]
+position = Vector2( 928.963, 288.252 )
+shape = SubResource( 6 )
+
+[node name="Camera2D" parent="." instance=ExtResource( 3 )]
+position = Vector2( 512, 296 )
+current = true
+
+[connection signal="input_event" from="Areas/CrateClicker" to="Areas/CrateClicker" method="_on_Area2D_input_event"]
+[connection signal="body_entered" from="Areas/Flag1" to="Areas/Flag1" method="_on_Flag1_body_entered"]
+[connection signal="body_entered" from="Areas/Flag2" to="Areas/Flag2" method="_on_Flag2_body_entered"]
